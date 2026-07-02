@@ -1,0 +1,137 @@
+/*
+=========================================================
+        School RFID Tracking System
+=========================================================
+
+Controller : NodeMCU ESP8266
+RFID Reader: RC522
+Author      : Suraj Katkar
+Version     : 1.0
+
+---------------------------------------------------------
+Features
+---------------------------------------------------------
+✔ Connect to WiFi
+✔ Read RFID Cards
+✔ Convert UID to String
+✔ Hardcoded Student Mapping
+✔ Print Attendance Information
+✔ Ready for FastAPI Integration
+=========================================================
+*/
+
+#include <SPI.h>
+#include <MFRC522.h>
+#include <ESP8266WiFi.h>
+
+#define SS_PIN D8
+#define RST_PIN D3
+
+MFRC522 rfid(SS_PIN, RST_PIN);
+
+//=========================================================
+// WiFi Credentials
+//=========================================================
+
+const char* ssid = "YOUR_WIFI_NAME";
+const char* password = "YOUR_WIFI_PASSWORD";
+
+//=========================================================
+
+void connectWiFi()
+{
+    Serial.print("Connecting to WiFi");
+
+    WiFi.begin(ssid, password);
+
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(500);
+        Serial.print(".");
+    }
+
+    Serial.println();
+    Serial.println("--------------------------------");
+    Serial.println("WiFi Connected");
+    Serial.print("ESP IP : ");
+    Serial.println(WiFi.localIP());
+    Serial.println("--------------------------------");
+}
+
+//=========================================================
+
+String getStudentName(String uid)
+{
+    if(uid=="4E0BF603")
+        return "Suraj Katkar";
+
+    if(uid=="710A4D08")
+        return "Rahul Sharma";
+
+    if(uid=="F6D2D903")
+        return "Priya Patil";
+
+    if(uid=="1433302B")
+        return "Amit Joshi";
+
+    return "Unknown Student";
+}
+
+//=========================================================
+
+void setup()
+{
+    Serial.begin(115200);
+
+    SPI.begin();
+
+    rfid.PCD_Init();
+
+    connectWiFi();
+
+    Serial.println();
+    Serial.println("=========================================");
+    Serial.println(" RFID Attendance Scanner Ready");
+    Serial.println("=========================================");
+}
+
+//=========================================================
+
+void loop()
+{
+    if (!rfid.PICC_IsNewCardPresent())
+        return;
+
+    if (!rfid.PICC_ReadCardSerial())
+        return;
+
+    String uid="";
+
+    for(byte i=0;i<rfid.uid.size;i++)
+    {
+        if(rfid.uid.uidByte[i]<0x10)
+            uid+="0";
+
+        uid+=String(rfid.uid.uidByte[i],HEX);
+    }
+
+    uid.toUpperCase();
+
+    String student=getStudentName(uid);
+
+    Serial.println();
+    Serial.println("================================");
+    Serial.print("UID      : ");
+    Serial.println(uid);
+
+    Serial.print("Student  : ");
+    Serial.println(student);
+
+    Serial.println("Attendance Recorded");
+    Serial.println("================================");
+
+    rfid.PICC_HaltA();
+    rfid.PCD_StopCrypto1();
+
+    delay(1500);
+}
